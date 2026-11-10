@@ -23,7 +23,7 @@ logger = get_logger("aeon.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(f"Starting {settings.APP_NAME} in [{settings.APP_ENV}] mode (Milestone 8: Complete Frontend Control Plane REST API)")
+    logger.info(f"Starting {settings.APP_NAME} in [{settings.APP_ENV}] mode (Production-Ready Autonomous Agent Procurement Control Plane)")
     yield
     logger.info(f"Shutting down {settings.APP_NAME}")
 
@@ -72,7 +72,7 @@ def create_application() -> FastAPI:
     @app.get("/", tags=["Root"])
     async def root():
         return {
-            "message": "AEON Agent Procurement Control Plane API (Milestone 8)",
+            "message": "AEON Agent Procurement Control Plane API",
             "docs": "/docs",
             "version": "1.0.0",
             "health": "/health",

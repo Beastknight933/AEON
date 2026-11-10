@@ -86,4 +86,7 @@ pytest -v
 - [Database Schema & 19 Entities](docs/DATABASE.md)
 - [Security Model & Tenancy](docs/SECURITY.md)
 - [ML Recommendation Contract](docs/ML_INTEGRATION.md)
+- [PayPal Sandbox Integration](docs/PAYPAL_SANDBOX.md)
 - [Render & Supabase Deployment](docs/DEPLOYMENT.md)
+- [Master Demo Runbook](docs/DEMO_RUNBOOK.md)
+- [Hardening & Issues Report](docs/ISSUES_AND_HARDENING.md)
