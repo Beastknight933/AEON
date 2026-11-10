@@ -1,10 +1,15 @@
 import decimal
 from typing import Dict, Any
-from app.integrations.ml.base import BaseRecommendationProvider
+from app.integrations.ml.base import RecommendationProvider
 from app.integrations.ml.schemas import RecommendationRequest, RecommendationResponse
 
 
-class MockRecommendationProvider(BaseRecommendationProvider):
+class MockRecommendationProvider(RecommendationProvider):
+    """
+    Deterministic multi-criteria heuristic recommendation provider used for testing
+    and as an automated fallback when an external ML model is unavailable or encounters errors.
+    """
+
     @property
     def provider_type(self) -> str:
         return "mock"
@@ -31,7 +36,7 @@ class MockRecommendationProvider(BaseRecommendationProvider):
                 price_score = max(0.0, 1.0 - price_ratio)
 
             reliability_score = float(c.reliability_score)
-            # Delivery score: 1.0 for instant, penalized for days delay
+            # Delivery score: 1.0 for instant, penalized 10% per day of delivery delay
             delivery_score = max(0.5, 1.0 - (c.estimated_delivery_days * 0.1))
 
             # Composite weight: 60% price, 25% reliability, 15% delivery speed
@@ -68,4 +73,5 @@ class MockRecommendationProvider(BaseRecommendationProvider):
                 "best_composite_score": best_composite_score,
             },
             provider_type=self.provider_type,
+            model_version="heuristic-v1.0",
         )

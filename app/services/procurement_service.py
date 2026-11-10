@@ -221,6 +221,8 @@ class ProcurementService:
                     (code for code, s in supplier_models.items() if s.id == sq.supplier_id), ""
                 ),
                 supplier_name=sq.supplier_name,
+                unit_price=sq.unit_price,
+                quantity=sq.quantity,
                 total_amount=sq.total_amount,
                 currency=sq.currency,
                 estimated_delivery_days=sq.estimated_delivery_days,
