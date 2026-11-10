@@ -47,4 +47,5 @@ class Transaction(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     provider_transaction_id: Mapped[Optional[str]] = mapped_column(String(128), unique=True, index=True, nullable=True)
 
     # Relationships
+    organization = relationship("Organization")
     purchase_request = relationship("PurchaseRequest", back_populates="transactions")

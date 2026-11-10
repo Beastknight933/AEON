@@ -336,6 +336,11 @@ class ProcurementService:
             transition_purchase_status(pr, PurchaseStatus.REQUIRES_APPROVAL)
             approval = Approval(
                 purchase_request_id=pr.id,
+                selected_quote_id=selected_quote.id,
+                amount=selected_quote.total_amount,
+                currency=selected_quote.currency,
+                policy_version=policy_version.version if policy_version else None,
+                expires_at=selected_quote.expires_at,
                 status=ApprovalStatus.PENDING,
                 notes="Automated approval requirement triggered by spending threshold.",
             )

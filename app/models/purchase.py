@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 from sqlalchemy import String, Numeric, Enum, JSON, ForeignKey, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
-from app.core.constants import PurchaseStatus
+from app.core.constants import FulfillmentStatus, PurchaseStatus
 from app.models.base import UUIDPrimaryKeyMixin, TimestampMixin
 
 
@@ -36,6 +36,12 @@ class PurchaseRequest(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         nullable=False,
         index=True,
     )
+    fulfillment_status: Mapped[FulfillmentStatus] = mapped_column(
+        Enum(FulfillmentStatus, name="fulfillment_status_enum", native_enum=False),
+        default=FulfillmentStatus.NOT_STARTED,
+        nullable=False,
+        index=True,
+    )
     selected_quote_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("supplier_quotes.id", ondelete="SET NULL", use_alter=True, name="fk_pr_selected_quote"),
@@ -58,3 +64,5 @@ class PurchaseRequest(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     recommendations = relationship("Recommendation", back_populates="purchase_request", cascade="all, delete-orphan")
     approvals = relationship("Approval", back_populates="purchase_request", cascade="all, delete-orphan")
+    payment_attempts = relationship("PaymentAttempt", back_populates="purchase_request", cascade="all, delete-orphan")
+    transactions = relationship("Transaction", back_populates="purchase_request")

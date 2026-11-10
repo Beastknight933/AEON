@@ -35,3 +35,35 @@ class RecentActivityItem(BaseModel):
 class DashboardOverviewResponse(BaseModel):
     stats: DashboardStatsResponse
     recent_activities: List[RecentActivityItem]
+
+
+class AgentSpendingItem(BaseModel):
+    agent_id: uuid.UUID
+    agent_name: str
+    total_spent: decimal.Decimal
+    purchase_count: int
+
+
+class SpendingSummaryResponse(BaseModel):
+    total_spent: decimal.Decimal
+    total_refunded: decimal.Decimal
+    net_spent: decimal.Decimal
+    currency: str = "USD"
+    by_category: Dict[str, decimal.Decimal]
+    by_supplier: Dict[str, decimal.Decimal]
+    by_agent: List[AgentSpendingItem]
+
+
+class AgentSummaryResponse(BaseModel):
+    agent_id: uuid.UUID
+    name: str
+    is_active: bool
+    assigned_policy_name: Optional[str]
+    assigned_budget_allocated: Optional[decimal.Decimal]
+    assigned_budget_spent: Optional[decimal.Decimal]
+    total_purchases_requested: int
+    total_purchases_approved: int
+    total_purchases_completed: int
+    total_spent: decimal.Decimal
+    currency: str = "USD"
+    created_at: datetime.datetime

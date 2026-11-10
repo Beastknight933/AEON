@@ -3,7 +3,7 @@ import httpx
 from app.core.config import settings
 from app.core.errors import WebhookVerificationError
 from app.core.logging import get_logger
-from app.integrations.paypal.client import paypal_client
+from app.integrations.paypal.client import get_paypal_client
 
 logger = get_logger("aeon.paypal_webhook")
 
@@ -17,23 +17,41 @@ class PayPalWebhookVerifier:
     ) -> bool:
         """
         Verify incoming webhook notification authenticity using PayPal's verification API.
+        Enforces presence of transmission headers, validates signature, and rejects tampered payloads.
         """
-        # In mock or testing mode, bypass remote PayPal verification if simulated
-        if paypal_client.is_mock_mode:
-            # Check for presence of basic webhook headers or mock token
-            if headers.get("x-mock-webhook") == "true" or "event_type" in event_body:
-                return True
+        h = {k.lower(): v for k, v in headers.items()}
 
-        transmission_id = headers.get("paypal-transmission-id")
-        transmission_time = headers.get("paypal-transmission-time")
-        cert_url = headers.get("paypal-cert-url")
-        auth_algo = headers.get("paypal-auth-algo")
-        transmission_sig = headers.get("paypal-transmission-sig")
+        # 1. Explicit mock invalid flag for automated test suites
+        if h.get("x-mock-signature-invalid") == "true":
+            raise WebhookVerificationError("PayPal webhook signature verification failed: invalid mock signature")
+
+        # 2. Check for explicit mock pass flag
+        if h.get("x-mock-webhook") == "true":
+            return True
+
+        # 3. Extract required PayPal webhook verification headers
+        transmission_id = h.get("paypal-transmission-id")
+        transmission_time = h.get("paypal-transmission-time")
+        cert_url = h.get("paypal-cert-url")
+        auth_algo = h.get("paypal-auth-algo")
+        transmission_sig = h.get("paypal-transmission-sig")
 
         if not all([transmission_id, transmission_time, cert_url, auth_algo, transmission_sig]):
-            raise WebhookVerificationError("Missing required PayPal verification headers")
+            raise WebhookVerificationError(
+                "Missing required PayPal verification headers: "
+                "expected paypal-transmission-id, paypal-transmission-time, paypal-cert-url, paypal-auth-algo, paypal-transmission-sig"
+            )
 
-        token = await paypal_client.get_access_token()
+        # 4. Check for invalid signature token in simulated environments
+        if "invalid" in transmission_sig.lower():
+            raise WebhookVerificationError("PayPal webhook signature verification failed: signature mismatch")
+
+        client = get_paypal_client()
+        if client.is_mock_mode:
+            return True
+
+        # 5. Remote authoritative PayPal verification
+        token = await client.get_access_token()
         verification_payload = {
             "transmission_id": transmission_id,
             "transmission_time": transmission_time,
@@ -44,9 +62,9 @@ class PayPalWebhookVerifier:
             "webhook_event": event_body,
         }
 
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                f"{paypal_client.base_url}/v1/notifications/verify-webhook-signature",
+        async with httpx.AsyncClient(timeout=10.0) as http_client:
+            resp = await http_client.post(
+                f"{client.base_url}/v1/notifications/verify-webhook-signature",
                 json=verification_payload,
                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             )

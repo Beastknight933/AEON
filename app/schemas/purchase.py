@@ -3,7 +3,7 @@ import decimal
 import uuid
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
-from app.core.constants import PurchaseStatus
+from app.core.constants import FulfillmentStatus, PurchaseStatus
 from app.schemas.policy import PolicyDecision
 
 
@@ -56,6 +56,7 @@ class PurchaseDetailResponse(BaseModel):
     currency: str
     requirements: Dict[str, Any]
     status: PurchaseStatus
+    fulfillment_status: FulfillmentStatus = FulfillmentStatus.NOT_STARTED
     selected_quote_id: Optional[uuid.UUID]
     quotes: List[SupplierQuoteResponse] = Field(default_factory=list)
     recommendation: Optional[RecommendationDetailResponse] = None
@@ -75,6 +76,7 @@ class PurchaseListResponse(BaseModel):
     max_budget: decimal.Decimal
     currency: str
     status: PurchaseStatus
+    fulfillment_status: FulfillmentStatus = FulfillmentStatus.NOT_STARTED
     selected_quote_id: Optional[uuid.UUID]
     created_at: datetime.datetime
 

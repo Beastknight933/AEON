@@ -18,7 +18,7 @@ class PaymentOrderCreateResponse(BaseModel):
     currency: str
     status: PaymentStatus
     approval_url: Optional[str]
-    created_at: datetime.datetime
+    created_at: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc))
 
 
 class PaymentCaptureRequest(BaseModel):
@@ -33,7 +33,7 @@ class PaymentCaptureResponse(BaseModel):
     currency: str
     status: PaymentStatus
     transaction_id: Optional[uuid.UUID]
-    completed_at: datetime.datetime
+    completed_at: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc))
 
 
 class PaymentStatusResponse(BaseModel):

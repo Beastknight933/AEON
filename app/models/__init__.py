@@ -8,6 +8,9 @@ from app.models.purchase import PurchaseRequest
 from app.models.approval import Approval
 from app.models.recommendation import Recommendation
 from app.models.audit import AuditEvent
+from app.models.payment import PaymentAttempt
+from app.models.transaction import Transaction
+from app.models.webhook import WebhookEvent
 
 __all__ = [
     "Base",
@@ -29,4 +32,7 @@ __all__ = [
     "Approval",
     "Recommendation",
     "AuditEvent",
+    "PaymentAttempt",
+    "Transaction",
+    "WebhookEvent",
 ]
