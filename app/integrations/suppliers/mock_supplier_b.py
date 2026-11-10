@@ -1,3 +1,4 @@
+import datetime
 import decimal
 from typing import Any, Dict
 from app.integrations.suppliers.base import BaseSupplierAdapter
@@ -43,6 +44,7 @@ class MockSupplierB(BaseSupplierAdapter):
             currency=currency,
             estimated_delivery_days=2,
             reliability_score=decimal.Decimal("0.94"),
+            expires_at=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=48),
             raw_data={
                 "provider": "MockHardwareSupply",
                 "warehouse": "central-hub-3",

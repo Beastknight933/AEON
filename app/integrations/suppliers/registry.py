@@ -2,22 +2,31 @@ import asyncio
 from typing import Dict, List, Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.logging import get_logger
 from app.integrations.suppliers.base import BaseSupplierAdapter
 from app.integrations.suppliers.mock_supplier_a import MockSupplierA
 from app.integrations.suppliers.mock_supplier_b import MockSupplierB
 from app.integrations.suppliers.schemas import NormalizedQuote
 from app.models.supplier import Supplier
 
+logger = get_logger("aeon.suppliers")
+
 
 class SupplierRegistry:
     def __init__(self):
         self._adapters: Dict[str, BaseSupplierAdapter] = {}
-        # Register default mock suppliers
-        self.register(MockSupplierA())
-        self.register(MockSupplierB())
+        self.reset_defaults()
 
     def register(self, adapter: BaseSupplierAdapter) -> None:
         self._adapters[adapter.code.lower()] = adapter
+
+    def unregister(self, code: str) -> None:
+        self._adapters.pop(code.lower(), None)
+
+    def reset_defaults(self) -> None:
+        self._adapters = {}
+        self.register(MockSupplierA())
+        self.register(MockSupplierB())
 
     def get(self, code: str) -> Optional[BaseSupplierAdapter]:
         return self._adapters.get(code.lower())
@@ -54,6 +63,7 @@ class SupplierRegistry:
     ) -> List[NormalizedQuote]:
         """
         Collect normalized quotes from all registered suppliers concurrently.
+        Gracefully handles adapter errors and isolates failures.
         """
         tasks = [
             adapter.fetch_quote(
@@ -65,11 +75,13 @@ class SupplierRegistry:
             for adapter in self._adapters.values()
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        valid_quotes: List[NormalizedQuote] = []
+        quotes: List[NormalizedQuote] = []
         for r in results:
             if isinstance(r, NormalizedQuote):
-                valid_quotes.append(r)
-        return valid_quotes
+                quotes.append(r)
+            elif isinstance(r, Exception):
+                logger.warning(f"Supplier adapter failed during quote collection: {r}")
+        return quotes
 
 
 # Global registry singleton

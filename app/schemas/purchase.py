@@ -26,6 +26,8 @@ class SupplierQuoteResponse(BaseModel):
     total_amount: decimal.Decimal
     currency: str
     estimated_delivery_days: int
+    expires_at: Optional[datetime.datetime] = None
+    is_valid: bool = True
     created_at: datetime.datetime
 
     class Config:

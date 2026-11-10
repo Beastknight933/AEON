@@ -1,3 +1,4 @@
+import datetime
 import decimal
 from typing import Any, Dict
 from app.integrations.suppliers.base import BaseSupplierAdapter
@@ -43,6 +44,7 @@ class MockSupplierA(BaseSupplierAdapter):
             currency=currency,
             estimated_delivery_days=0,  # instant cloud provisioning
             reliability_score=decimal.Decimal("0.98"),
+            expires_at=datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=24),
             raw_data={
                 "provider": "MockCloudStore",
                 "tier": "enterprise",

@@ -11,10 +11,11 @@ from app.core.constants import UserRole
 from app.core.security import hash_password, generate_agent_api_key
 from app.models.organization import Organization, User, Membership
 from app.models.agent import Agent, AgentCredential
+from app.integrations.suppliers.registry import supplier_registry
 
 
 async def seed():
-    print("Starting AEON database seeding (Milestone 1)...")
+    print("Starting AEON database seeding (Milestones 1 - 3)...")
     async with AsyncSessionLocal() as session:
         # 1. Check or create Organization
         org_name = "Acme Autonomous Corp"
@@ -88,6 +89,11 @@ async def seed():
             print(f"[CREATED] Agent: {agent.name} (ID: {agent.id})")
         else:
             print(f"[EXISTS] Agent: {agent.name} (ID: {agent.id})")
+
+        # 4. Check or create default mock suppliers
+        suppliers = await supplier_registry.ensure_suppliers_in_db(session)
+        for code, supp in suppliers.items():
+            print(f"[REGISTERED] Supplier: {supp.name} ({code}) (ID: {supp.id})")
 
         await session.commit()
 

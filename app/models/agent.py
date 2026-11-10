@@ -24,6 +24,7 @@ class Agent(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     organization = relationship("Organization", back_populates="agents")
     credentials = relationship("AgentCredential", back_populates="agent", cascade="all, delete-orphan")
     policy_assignments = relationship("AgentPolicyAssignment", back_populates="agent", cascade="all, delete-orphan")
+    purchase_requests = relationship("PurchaseRequest", back_populates="agent")
 
 
 class AgentCredential(Base, UUIDPrimaryKeyMixin, TimestampMixin):

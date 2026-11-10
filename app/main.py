@@ -10,6 +10,8 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.agents import router as agents_router
 from app.api.v1.policies import router as policies_router
 from app.api.v1.budgets import router as budgets_router
+from app.api.v1.purchases import router as purchases_router
+from app.api.v1.approvals import router as approvals_router
 
 setup_logging(debug=settings.DEBUG)
 logger = get_logger("aeon.main")
@@ -17,7 +19,7 @@ logger = get_logger("aeon.main")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(f"Starting {settings.APP_NAME} in [{settings.APP_ENV}] mode (Milestone 2: Policies & Budgets)")
+    logger.info(f"Starting {settings.APP_NAME} in [{settings.APP_ENV}] mode (Milestone 3: Agent Procurement & Suppliers)")
     yield
     logger.info(f"Shutting down {settings.APP_NAME}")
 
@@ -25,7 +27,7 @@ async def lifespan(app: FastAPI):
 def create_application() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
-        description="AEON: Agent Procurement Control Plane — Milestone 2: Procurement Policies & Budget Integrity Engine.",
+        description="AEON: Agent Procurement Control Plane — Milestone 3: Agent Procurement & Supplier Integrations.",
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",
@@ -49,18 +51,20 @@ def create_application() -> FastAPI:
     # Centralized error handlers
     register_error_handlers(app)
 
-    # Mount Milestone 1 & 2 routers
+    # Mount Milestone 1, 2 & 3 routers
     app.include_router(health_router)
     app.include_router(health_router, prefix=settings.API_V1_PREFIX)
     app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
     app.include_router(agents_router, prefix=settings.API_V1_PREFIX)
     app.include_router(policies_router, prefix=settings.API_V1_PREFIX)
     app.include_router(budgets_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(purchases_router, prefix=settings.API_V1_PREFIX)
+    app.include_router(approvals_router, prefix=settings.API_V1_PREFIX)
 
     @app.get("/", tags=["Root"])
     async def root():
         return {
-            "message": "AEON Agent Procurement Control Plane API (Milestone 2)",
+            "message": "AEON Agent Procurement Control Plane API (Milestone 3)",
             "docs": "/docs",
             "version": "1.0.0",
             "health": "/health",

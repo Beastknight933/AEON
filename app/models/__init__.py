@@ -3,6 +3,11 @@ from app.models.organization import Organization, User, Membership
 from app.models.agent import Agent, AgentCredential
 from app.models.policy import Policy, PolicyVersion, AgentPolicyAssignment
 from app.models.budget import Budget, BudgetReservation
+from app.models.supplier import Supplier, SupplierQuote
+from app.models.purchase import PurchaseRequest
+from app.models.approval import Approval
+from app.models.recommendation import Recommendation
+from app.models.audit import AuditEvent
 
 __all__ = [
     "Base",
@@ -18,4 +23,10 @@ __all__ = [
     "AgentPolicyAssignment",
     "Budget",
     "BudgetReservation",
+    "Supplier",
+    "SupplierQuote",
+    "PurchaseRequest",
+    "Approval",
+    "Recommendation",
+    "AuditEvent",
 ]

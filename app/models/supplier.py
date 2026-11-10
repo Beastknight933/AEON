@@ -52,6 +52,7 @@ class SupplierQuote(Base, UUIDPrimaryKeyMixin):
     expires_at: Mapped[Optional[datetime.datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    is_valid: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )

@@ -51,8 +51,10 @@ class PurchaseRequest(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         cascade="all, delete-orphan",
         foreign_keys="[SupplierQuote.purchase_request_id]"
     )
+    selected_quote = relationship(
+        "SupplierQuote",
+        foreign_keys=[selected_quote_id],
+        post_update=True,
+    )
     recommendations = relationship("Recommendation", back_populates="purchase_request", cascade="all, delete-orphan")
-    budget_reservations = relationship("BudgetReservation", back_populates="purchase_request", cascade="all, delete-orphan")
     approvals = relationship("Approval", back_populates="purchase_request", cascade="all, delete-orphan")
-    transactions = relationship("Transaction", back_populates="purchase_request")
-    payment_attempts = relationship("PaymentAttempt", back_populates="purchase_request")

@@ -21,12 +21,11 @@ from app.integrations.suppliers.registry import supplier_registry
 from app.models.agent import Agent
 from app.models.approval import Approval
 from app.models.audit import AuditEvent
-from app.models.budget import Budget
+from app.models.budget import Budget, BudgetReservation
 from app.models.organization import Organization
 from app.models.purchase import PurchaseRequest
 from app.models.recommendation import Recommendation
 from app.models.supplier import Supplier, SupplierQuote
-from app.models.transaction import Transaction
 from app.repositories.budget_repo import BudgetRepository
 from app.repositories.policy_repo import PolicyRepository
 from app.schemas.policy import PolicyDecision
@@ -81,15 +80,16 @@ class ProcurementService:
         """
         since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24)
         stmt = (
-            select(func.coalesce(func.sum(Transaction.amount), decimal.Decimal("0.00")))
-            .join(PurchaseRequest, Transaction.purchase_request_id == PurchaseRequest.id)
+            select(func.coalesce(func.sum(BudgetReservation.amount), decimal.Decimal("0.00")))
+            .join(PurchaseRequest, BudgetReservation.purchase_request_id == PurchaseRequest.id)
             .where(
                 PurchaseRequest.agent_id == agent_id,
-                Transaction.created_at >= since,
+                BudgetReservation.status.in_([ReservationStatus.ACTIVE, ReservationStatus.SETTLED]),
+                BudgetReservation.created_at >= since,
             )
         )
-        total_tx = await self.session.scalar(stmt) or decimal.Decimal("0.00")
-        return total_tx
+        total_res = await self.session.scalar(stmt) or decimal.Decimal("0.00")
+        return total_res
 
     async def execute_procurement_pipeline(
         self,
@@ -149,14 +149,27 @@ class ProcurementService:
 
         if not normalized_quotes:
             transition_purchase_status(pr, PurchaseStatus.BLOCKED)
+            self.session.add(
+                AuditEvent(
+                    organization_id=organization.id,
+                    actor_type="SYSTEM",
+                    actor_id="supplier_registry",
+                    action=AuditAction.POLICY_EVALUATED.value,
+                    entity_type="purchase_request",
+                    entity_id=str(pr.id),
+                    metadata_json={"error": "NO_SUPPLIER_QUOTES"},
+                )
+            )
             await self.session.commit()
             raise SupplierError("No quotes could be obtained from registered suppliers.")
 
+        now = datetime.datetime.now(datetime.timezone.utc)
         persisted_quotes: List[SupplierQuote] = []
         for nq in normalized_quotes:
             supp_model = supplier_models.get(nq.supplier_code)
             if not supp_model:
                 continue
+            is_valid = not nq.is_expired
             sq = SupplierQuote(
                 purchase_request_id=pr.id,
                 supplier_id=supp_model.id,
@@ -168,11 +181,35 @@ class ProcurementService:
                 currency=nq.currency,
                 estimated_delivery_days=nq.estimated_delivery_days,
                 raw_quote_data=nq.raw_data,
+                expires_at=nq.expires_at,
+                is_valid=is_valid,
             )
             self.session.add(sq)
             persisted_quotes.append(sq)
 
         await self.session.flush()
+
+        # Filter valid, unexpired candidates
+        valid_candidates = [
+            sq for sq in persisted_quotes
+            if sq.is_valid and (sq.expires_at is None or sq.expires_at > now)
+        ]
+
+        if not valid_candidates:
+            transition_purchase_status(pr, PurchaseStatus.BLOCKED)
+            self.session.add(
+                AuditEvent(
+                    organization_id=organization.id,
+                    actor_type="SYSTEM",
+                    actor_id="procurement_pipeline",
+                    action=AuditAction.POLICY_EVALUATED.value,
+                    entity_type="purchase_request",
+                    entity_id=str(pr.id),
+                    metadata_json={"error": "ALL_QUOTES_EXPIRED_OR_INVALID"},
+                )
+            )
+            await self.session.commit()
+            return await self.get_purchase_detail(pr.id, organization.id)
 
         # Step 5: Request ML Recommendation
         transition_purchase_status(pr, PurchaseStatus.RECOMMENDED)
@@ -193,7 +230,7 @@ class ProcurementService:
                 ),
                 attributes=sq.raw_quote_data,
             )
-            for sq in persisted_quotes
+            for sq in valid_candidates
         ]
 
         rec_req = RecommendationRequest(
@@ -208,17 +245,17 @@ class ProcurementService:
         provider = get_recommendation_provider()
         rec_res = await provider.recommend(rec_req)
 
-        # Step 6: Validate recommendation against persisted quotes
+        # Step 6: Validate recommendation against valid persisted quotes
         # "Never use model-provided amounts as payment amounts. Always load the selected quote from the database."
         selected_quote = next(
-            (q for q in persisted_quotes if q.id == rec_res.recommended_quote_id), None
+            (q for q in valid_candidates if q.id == rec_res.recommended_quote_id), None
         )
         if not selected_quote:
-            # Fallback to the lowest amount persisted quote if model returned an unverified quote ID
-            selected_quote = min(persisted_quotes, key=lambda q: q.total_amount)
+            # Fallback to the lowest amount valid quote if model returned an unverified/expired quote ID
+            selected_quote = min(valid_candidates, key=lambda q: q.total_amount)
             rec_res.recommended_quote_id = selected_quote.id
             rec_res.reasoning = (
-                f"[UNVERIFIED_QUOTE_FALLBACK: Model returned unknown quote id] Defaulted to lowest-price quote from {selected_quote.supplier_name}."
+                f"[UNVERIFIED_QUOTE_FALLBACK: Model returned unknown/expired quote id] Defaulted to lowest-price valid quote from {selected_quote.supplier_name}."
             )
 
         pr.selected_quote_id = selected_quote.id
