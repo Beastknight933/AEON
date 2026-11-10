@@ -49,6 +49,9 @@ class SupplierQuote(Base, UUIDPrimaryKeyMixin):
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
     estimated_delivery_days: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     raw_quote_data: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    expires_at: Mapped[Optional[datetime.datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, nullable=False
     )

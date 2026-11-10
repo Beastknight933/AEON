@@ -14,7 +14,7 @@ from app.models.agent import Agent, AgentCredential
 
 
 async def seed():
-    print("🌱 Starting AEON database seeding (Milestone 1)...")
+    print("Starting AEON database seeding (Milestone 1)...")
     async with AsyncSessionLocal() as session:
         # 1. Check or create Organization
         org_name = "Acme Autonomous Corp"
@@ -25,9 +25,9 @@ async def seed():
             org = Organization(name=org_name, slug=org_slug)
             session.add(org)
             await session.flush()
-            print(f"✅ Created Organization: {org.name} (ID: {org.id})")
+            print(f"[CREATED] Organization: {org.name} (ID: {org.id})")
         else:
-            print(f"ℹ️ Organization already exists: {org.name} (ID: {org.id})")
+            print(f"[EXISTS] Organization: {org.name} (ID: {org.id})")
 
         # 2. Check or create Admin User
         admin_email = "admin@aeon.local"
@@ -42,7 +42,7 @@ async def seed():
             )
             session.add(admin)
             await session.flush()
-            print(f"✅ Created Admin User: {admin.email} (ID: {admin.id})")
+            print(f"[CREATED] Admin User: {admin.email} (ID: {admin.id})")
 
             # Create Admin Membership
             membership = Membership(
@@ -52,9 +52,9 @@ async def seed():
             )
             session.add(membership)
             await session.flush()
-            print(f"✅ Assigned ADMIN role for {admin.email} in {org.name}")
+            print(f"[ASSIGNED] ADMIN role for {admin.email} in {org.name}")
         else:
-            print(f"ℹ️ Admin user already exists: {admin.email} (ID: {admin.id})")
+            print(f"[EXISTS] Admin user: {admin.email} (ID: {admin.id})")
 
         # 3. Check or create initial Autonomous Agent
         agent_name = "ProcurementBot-Alpha"
@@ -85,14 +85,14 @@ async def seed():
             )
             session.add(cred)
             await session.flush()
-            print(f"✅ Created Agent: {agent.name} (ID: {agent.id})")
+            print(f"[CREATED] Agent: {agent.name} (ID: {agent.id})")
         else:
-            print(f"ℹ️ Agent already exists: {agent.name} (ID: {agent.id})")
+            print(f"[EXISTS] Agent: {agent.name} (ID: {agent.id})")
 
         await session.commit()
 
         print("\n" + "=" * 60)
-        print("🎉 SEEDING COMPLETED SUCCESSFULLY")
+        print("SEEDING COMPLETED SUCCESSFULLY")
         print("=" * 60)
         print(f"Organization ID : {org.id}")
         print(f"Admin Email     : {admin_email}")
@@ -100,7 +100,7 @@ async def seed():
         print(f"Agent ID        : {agent.id}")
         if raw_key:
             print(f"Agent API Key   : {raw_key}")
-            print("⚠️  Store this API Key securely! It cannot be retrieved again.")
+            print("Notice: Store this API Key securely! It cannot be retrieved again.")
         print("=" * 60 + "\n")
 
 

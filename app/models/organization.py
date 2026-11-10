@@ -15,6 +15,8 @@ class Organization(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     # Relationships
     memberships = relationship("Membership", back_populates="organization", cascade="all, delete-orphan")
     agents = relationship("Agent", back_populates="organization", cascade="all, delete-orphan")
+    policies = relationship("Policy", back_populates="organization", cascade="all, delete-orphan")
+    budgets = relationship("Budget", back_populates="organization", cascade="all, delete-orphan")
 
 
 class User(Base, UUIDPrimaryKeyMixin, TimestampMixin):

@@ -1,12 +1,17 @@
+import decimal
 import uuid
 from typing import List, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.errors import NotFoundError, ConflictError
+from app.core.errors import NotFoundError
+from app.engines.policy_engine import DeterministicPolicyEngine
 from app.models.policy import Policy, PolicyVersion, AgentPolicyAssignment
 from app.repositories.agent_repo import AgentRepository
+from app.repositories.budget_repo import BudgetRepository
 from app.repositories.policy_repo import PolicyRepository
 from app.schemas.policy import (
     PolicyCreateRequest,
+    PolicyDecision,
+    PolicyEvaluationRequest,
     PolicyResponse,
     PolicyVersionCreate,
     PolicyVersionResponse,
@@ -92,6 +97,18 @@ class PolicyService:
         await self.session.refresh(assignment)
         return PolicyAssignmentResponse.model_validate(assignment)
 
+    async def get_active_assignment_for_agent(
+        self, agent_id: uuid.UUID, organization_id: uuid.UUID
+    ) -> Optional[PolicyAssignmentResponse]:
+        agent = await self.agent_repo.get_by_id(agent_id, org_id=organization_id)
+        if not agent:
+            raise NotFoundError("Agent", agent_id)
+
+        assignment = await self.policy_repo.get_active_assignment_for_agent(agent.id)
+        if not assignment:
+            return None
+        return PolicyAssignmentResponse.model_validate(assignment)
+
     async def get_active_policy_for_agent(
         self, agent_id: uuid.UUID
     ) -> Tuple[Optional[Policy], Optional[PolicyVersion]]:
@@ -103,3 +120,25 @@ class PolicyService:
             return None, None
         version = await self.policy_repo.get_latest_version(policy.id)
         return policy, version
+
+    async def evaluate_for_agent(
+        self, organization_id: uuid.UUID, req: PolicyEvaluationRequest
+    ) -> PolicyDecision:
+        agent = await self.agent_repo.get_by_id(req.agent_id, org_id=organization_id)
+        if not agent:
+            raise NotFoundError("Agent", req.agent_id)
+
+        policy, policy_version = await self.get_active_policy_for_agent(agent.id)
+        budget_repo = BudgetRepository(self.session)
+        budget = await budget_repo.get_budget_for_agent_or_org(organization_id, agent.id)
+
+        return DeterministicPolicyEngine.evaluate(
+            agent=agent,
+            policy=policy,
+            policy_version=policy_version,
+            budget=budget,
+            supplier_code=req.supplier_code,
+            amount=req.amount,
+            currency=req.currency,
+            daily_spent_and_reserved=req.daily_spent_and_reserved or decimal.Decimal("0.00"),
+        )

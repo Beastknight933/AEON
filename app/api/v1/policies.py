@@ -1,5 +1,5 @@
 import uuid
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +11,8 @@ from app.schemas.policy import (
     PolicyAssignmentRequest,
     PolicyAssignmentResponse,
     PolicyCreateRequest,
+    PolicyDecision,
+    PolicyEvaluationRequest,
     PolicyResponse,
     PolicyVersionCreate,
     PolicyVersionResponse,
@@ -89,3 +91,32 @@ async def assign_policy_to_agent(
     _, _, org = context
     service = PolicyService(db)
     return await service.assign_to_agent(agent_id, req.policy_id, org.id)
+
+
+@router.get("/assignments/{agent_id}", response_model=Optional[PolicyAssignmentResponse])
+async def get_agent_policy_assignment(
+    agent_id: uuid.UUID,
+    context: tuple[User, Membership, Organization] = Depends(get_current_user_and_membership),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get current active policy assignment for an agent.
+    """
+    _, _, org = context
+    service = PolicyService(db)
+    return await service.get_active_assignment_for_agent(agent_id, org.id)
+
+
+@router.post("/evaluate", response_model=PolicyDecision)
+async def evaluate_policy(
+    req: PolicyEvaluationRequest,
+    context: tuple[User, Membership, Organization] = Depends(get_current_user_and_membership),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Deterministically evaluate procurement policy constraints for an agent, transaction amount,
+    and supplier without initiating purchase or locking funds.
+    """
+    _, _, org = context
+    service = PolicyService(db)
+    return await service.evaluate_for_agent(org.id, req)

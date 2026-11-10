@@ -97,3 +97,12 @@ class BudgetService:
         await self.session.commit()
         await self.session.refresh(reservation)
         return BudgetReservationResponse.model_validate(reservation)
+
+    async def list_reservations(
+        self, budget_id: uuid.UUID, organization_id: uuid.UUID
+    ) -> List[BudgetReservationResponse]:
+        budget = await self.budget_repo.get_by_id(budget_id, org_id=organization_id)
+        if not budget:
+            raise NotFoundError("Budget", budget_id)
+        reservations = await self.budget_repo.list_reservations_by_budget(budget_id)
+        return [BudgetReservationResponse.model_validate(r) for r in reservations]

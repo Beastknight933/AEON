@@ -1,11 +1,10 @@
 import decimal
 import uuid
-from typing import List, Optional
+from typing import Any, List, Optional
 from app.core.constants import PolicyReasonCode
 from app.models.agent import Agent
 from app.models.budget import Budget
 from app.models.policy import Policy, PolicyVersion
-from app.models.supplier import SupplierQuote
 from app.schemas.policy import PolicyDecision
 
 
@@ -23,10 +22,21 @@ class DeterministicPolicyEngine:
         policy: Optional[Policy],
         policy_version: Optional[PolicyVersion],
         budget: Optional[Budget],
-        quote: SupplierQuote,
         supplier_code: str,
+        amount: Optional[decimal.Decimal] = None,
+        currency: str = "USD",
+        quote: Optional[Any] = None,
         daily_spent_and_reserved: decimal.Decimal = decimal.Decimal("0.00"),
     ) -> PolicyDecision:
+        if quote is not None:
+            total_amount = quote.total_amount
+            tx_currency = quote.currency
+        elif amount is not None:
+            total_amount = amount
+            tx_currency = currency
+        else:
+            raise ValueError("Either amount or quote must be provided to evaluate policy")
+
         reason_codes: List[str] = []
         hard_violation = False
 
@@ -46,11 +56,11 @@ class DeterministicPolicyEngine:
                 policy_id=None,
                 policy_version=None,
                 approved_max_amount=None,
-                currency=quote.currency,
+                currency=tx_currency,
             )
 
-        # 3. Currency support check
-        if quote.currency != "USD" or quote.currency not in policy_version.allowed_currencies:
+        # 3. Currency support check (Phase 1 supports USD only)
+        if tx_currency != "USD" or tx_currency not in policy_version.allowed_currencies:
             hard_violation = True
             reason_codes.append(PolicyReasonCode.UNSUPPORTED_CURRENCY.value)
 
@@ -62,12 +72,12 @@ class DeterministicPolicyEngine:
                 reason_codes.append(PolicyReasonCode.SUPPLIER_NOT_ALLOWED.value)
 
         # 5. Per-transaction spending limit
-        if quote.total_amount > policy_version.max_amount_per_transaction:
+        if total_amount > policy_version.max_amount_per_transaction:
             hard_violation = True
             reason_codes.append(PolicyReasonCode.PER_TRANSACTION_LIMIT_EXCEEDED.value)
 
         # 6. Daily spending limit check
-        projected_daily_total = daily_spent_and_reserved + quote.total_amount
+        projected_daily_total = daily_spent_and_reserved + total_amount
         if projected_daily_total > policy_version.max_amount_per_day:
             hard_violation = True
             reason_codes.append(PolicyReasonCode.DAILY_LIMIT_EXCEEDED.value)
@@ -78,7 +88,7 @@ class DeterministicPolicyEngine:
             reason_codes.append(PolicyReasonCode.INSUFFICIENT_BUDGET.value)
         else:
             available_budget = budget.allocated_amount - budget.reserved_amount - budget.spent_amount
-            if available_budget < quote.total_amount:
+            if available_budget < total_amount:
                 hard_violation = True
                 reason_codes.append(PolicyReasonCode.INSUFFICIENT_BUDGET.value)
 
@@ -91,12 +101,12 @@ class DeterministicPolicyEngine:
                 policy_id=policy.id,
                 policy_version=policy_version.version,
                 approved_max_amount=None,
-                currency=quote.currency,
+                currency=tx_currency,
             )
 
         # 8. Approval threshold check
         requires_approval = False
-        if quote.total_amount > policy_version.approval_threshold_amount:
+        if total_amount > policy_version.approval_threshold_amount:
             requires_approval = True
             reason_codes.append(PolicyReasonCode.APPROVAL_REQUIRED_AMOUNT_THRESHOLD.value)
         else:
@@ -108,6 +118,6 @@ class DeterministicPolicyEngine:
             reason_codes=reason_codes,
             policy_id=policy.id,
             policy_version=policy_version.version,
-            approved_max_amount=quote.total_amount,
-            currency=quote.currency,
+            approved_max_amount=total_amount,
+            currency=tx_currency,
         )

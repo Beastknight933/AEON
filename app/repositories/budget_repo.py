@@ -105,6 +105,15 @@ class BudgetRepository:
         stmt = select(BudgetReservation).where(BudgetReservation.id == reservation_id)
         return await self.session.scalar(stmt)
 
+    async def list_reservations_by_budget(self, budget_id: uuid.UUID) -> List[BudgetReservation]:
+        stmt = (
+            select(BudgetReservation)
+            .where(BudgetReservation.budget_id == budget_id)
+            .order_by(BudgetReservation.created_at.desc())
+        )
+        result = await self.session.scalars(stmt)
+        return list(result.all())
+
     async def get_reservation_by_purchase(self, purchase_request_id: uuid.UUID) -> Optional[BudgetReservation]:
         stmt = select(BudgetReservation).where(
             BudgetReservation.purchase_request_id == purchase_request_id

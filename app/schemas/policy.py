@@ -76,3 +76,11 @@ class PolicyDecision(BaseModel):
     policy_version: Optional[int] = None
     approved_max_amount: Optional[decimal.Decimal] = None
     currency: str = "USD"
+
+
+class PolicyEvaluationRequest(BaseModel):
+    agent_id: uuid.UUID
+    amount: decimal.Decimal = Field(..., gt=0)
+    currency: str = Field("USD", max_length=3)
+    supplier_code: str = Field(..., min_length=1, max_length=64)
+    daily_spent_and_reserved: Optional[decimal.Decimal] = Field(default=decimal.Decimal("0.00"), ge=0)

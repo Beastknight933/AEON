@@ -22,6 +22,12 @@ class BudgetUpdateRequest(BaseModel):
     end_date: Optional[datetime.datetime] = None
 
 
+class BudgetReservationCreateRequest(BaseModel):
+    purchase_request_id: uuid.UUID
+    amount: decimal.Decimal = Field(..., gt=0)
+    currency: str = Field("USD", max_length=3)
+
+
 class BudgetResponse(BaseModel):
     id: uuid.UUID
     organization_id: uuid.UUID

@@ -63,7 +63,6 @@ class BudgetReservation(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     )
     purchase_request_id: Mapped[uuid.UUID] = mapped_column(
         Uuid(as_uuid=True),
-        ForeignKey("purchase_requests.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
@@ -79,4 +78,3 @@ class BudgetReservation(Base, UUIDPrimaryKeyMixin, TimestampMixin):
 
     # Relationships
     budget = relationship("Budget", back_populates="reservations")
-    purchase_request = relationship("PurchaseRequest", back_populates="budget_reservations")
