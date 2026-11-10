@@ -1,0 +1,73 @@
+import uuid
+from typing import List
+from fastapi import APIRouter, Depends, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user_and_membership, require_roles
+from app.core.constants import UserRole
+from app.core.database import get_db
+from app.models.organization import Membership, Organization, User
+from app.schemas.budget import (
+    BudgetCreateRequest,
+    BudgetResponse,
+    BudgetUpdateRequest,
+)
+from app.services.budget_service import BudgetService
+
+router = APIRouter(prefix="/budgets", tags=["Budgets & Integrity"])
+
+
+@router.post("", response_model=BudgetResponse, status_code=status.HTTP_201_CREATED)
+async def create_budget(
+    req: BudgetCreateRequest,
+    context: tuple[User, Membership, Organization] = Depends(require_roles([UserRole.ADMIN])),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Allocate a new budget for the organization or a designated agent.
+    """
+    _, _, org = context
+    service = BudgetService(db)
+    return await service.create_budget(org.id, req)
+
+
+@router.get("", response_model=List[BudgetResponse])
+async def list_budgets(
+    context: tuple[User, Membership, Organization] = Depends(get_current_user_and_membership),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    List all active and historical budgets for the organization.
+    """
+    _, _, org = context
+    service = BudgetService(db)
+    return await service.list_budgets(org.id)
+
+
+@router.get("/{budget_id}", response_model=BudgetResponse)
+async def get_budget(
+    budget_id: uuid.UUID,
+    context: tuple[User, Membership, Organization] = Depends(get_current_user_and_membership),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get current allocation, reserved, spent, and available amounts for a budget.
+    """
+    _, _, org = context
+    service = BudgetService(db)
+    return await service.get_budget(budget_id, org.id)
+
+
+@router.patch("/{budget_id}", response_model=BudgetResponse)
+async def update_budget(
+    budget_id: uuid.UUID,
+    req: BudgetUpdateRequest,
+    context: tuple[User, Membership, Organization] = Depends(require_roles([UserRole.ADMIN])),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Update budget allocation or lifecycle status.
+    """
+    _, _, org = context
+    service = BudgetService(db)
+    return await service.update_budget(budget_id, org.id, req)
