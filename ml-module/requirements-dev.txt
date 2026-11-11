@@ -1,0 +1,7 @@
+# AEON ML Module - Development & Testing Dependencies
+-r requirements.txt
+pytest>=7.0.0
+fastapi>=0.100.0
+httpx>=0.24.0
+uvicorn>=0.20.0
+
