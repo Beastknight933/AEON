@@ -266,7 +266,7 @@ class ProcurementService:
             purchase_request_id=pr.id,
             provider_type=rec_res.provider_type,
             recommended_quote_id=selected_quote.id,
-            reasoning=rec_res.reasoning,
+            reasoning=rec_res.reasoning[:1024],
             comparison_scores=rec_res.comparison_scores,
             is_accepted=True,
         )

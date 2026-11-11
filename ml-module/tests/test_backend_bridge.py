@@ -89,3 +89,41 @@ def test_backend_module_adapter_compatibility():
     assert str(q2_id) in validated.comparison_scores["ranking"]
     assert 0.0 <= validated.comparison_scores["best_composite_score"] <= 1.0
     assert 0.0 <= validated.comparison_scores["best_composite_score_100"] <= 100.0
+
+
+def test_backend_bridge_truncates_long_reasoning_to_1024():
+    """Verify that reasoning text length never exceeds PostgreSQL VARCHAR(1024) limit."""
+    candidates = []
+    for i in range(12):
+        candidates.append(
+            BackendQuoteCandidate(
+                quote_id=uuid.uuid4(),
+                supplier_id=uuid.uuid4(),
+                supplier_code=f"SUP-EXTREME-{i}",
+                supplier_name=f"Supplier Enterprise Corporation Global Division {i}",
+                unit_price=decimal.Decimal(f"{100 + i * 20}.00"),
+                quantity=1,
+                total_amount=decimal.Decimal(f"{100 + i * 20}.00"),
+                currency="USD",
+                estimated_delivery_days=2 + i * 2,
+                reliability_score=decimal.Decimal(f"{max(0.1, 0.95 - i * 0.08):.2f}"),
+                attributes={"quality_score": max(50.0, 95.0 - i * 5.0)},
+            )
+        )
+
+    backend_req = BackendRecommendationRequest(
+        purchase_id=uuid.uuid4(),
+        currency="USD",
+        item_description="Extremely large candidate pool stress test",
+        category="compute",
+        requirements={"max_delivery_days": 4, "min_quality_score": 85.0},
+        candidates=candidates,
+    )
+
+    raw_result = recommend(backend_req)
+    validated = BackendRecommendationResponse.model_validate(raw_result)
+
+    assert len(validated.reasoning) <= 1024
+    assert validated.reasoning.endswith("...")
+    assert validated.provider_type == "module"
+

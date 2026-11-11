@@ -92,9 +92,12 @@ class ModuleRecommendationAdapter(RecommendationProvider):
 
     async def _execute_fallback(self, request: RecommendationRequest, error_reason: str) -> RecommendationResponse:
         fallback_res = await self.fallback_provider.recommend(request)
+        fallback_reasoning = f"[FALLBACK: {error_reason}] {fallback_res.reasoning}"
+        if len(fallback_reasoning) > 1024:
+            fallback_reasoning = fallback_reasoning[:1021] + "..."
         return RecommendationResponse(
             recommended_quote_id=fallback_res.recommended_quote_id,
-            reasoning=f"[FALLBACK: {error_reason}] {fallback_res.reasoning}",
+            reasoning=fallback_reasoning,
             comparison_scores=fallback_res.comparison_scores,
             provider_type="fallback",
             model_version=fallback_res.model_version,

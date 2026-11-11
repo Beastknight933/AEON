@@ -160,10 +160,15 @@ def format_backend_response(
         }
 
     best_score_100 = response.scores[0].composite_score
+    reasoning_text = response.reasoning
+    if len(reasoning_text) > 1024:
+        reasoning_text = reasoning_text[:1021] + "..."
+
     return {
         "recommended_quote_id": rec_uuid,
-        "reasoning": response.reasoning,
+        "reasoning": reasoning_text,
         "comparison_scores": {
+            "model_version": response.model_version,
             "ranking": ranking,
             "best_composite_score": round(best_score_100 / 100.0, 4),
             "best_composite_score_100": best_score_100,

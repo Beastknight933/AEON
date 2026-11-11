@@ -60,7 +60,7 @@ class Settings(BaseSettings):
 
     # ML Recommendation Configuration
     ML_PROVIDER_TYPE: str = "mock"  # "mock" or "module"
-    ML_MODULE_PATH: str = "app.integrations.ml.mock_provider"
+    ML_MODULE_PATH: str = "aeon_ml"
     ML_TIMEOUT_SECONDS: float = 5.0
 
     # Procurement Policy Defaults

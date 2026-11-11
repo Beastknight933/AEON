@@ -189,3 +189,78 @@ async def test_teammate_model_failure_triggers_fallback_and_authorizes(async_cli
         assert "[FALLBACK:" in rec["reasoning"]
     finally:
         sys.modules.pop(dummy_module_name, None)
+
+
+@pytest.mark.asyncio
+async def test_real_aeon_ml_module_full_procurement_flow(async_client, monkeypatch):
+    """
+    Test end-to-end procurement pipeline with the real aeon_ml module:
+    1. ML_PROVIDER_TYPE set to 'module' and ML_MODULE_PATH set to 'aeon_ml'.
+    2. Purchase created via agent API with criteria constraints.
+    3. aeon_ml executes in-process, scores quotes with HybridMLRanker, and generates reasoning.
+    4. Selected quote is verified and persisted in recommendations table.
+    5. Reasoning length is <= 1024 characters.
+    6. Policy engine authorizes purchase based on selected DB quote amount.
+    7. Admin GET /api/v1/purchases/{id} verifies persisted recommendation details.
+    """
+    ctx = await setup_org_agent_policy_budget(async_client, org_name="RealMLCorp", admin_email="admin@realmlcorp.io")
+
+    monkeypatch.setattr(settings, "ML_PROVIDER_TYPE", "module")
+    monkeypatch.setattr(settings, "ML_MODULE_PATH", "aeon_ml")
+
+    pr_res = await async_client.post(
+        "/api/v1/purchases",
+        headers=ctx["agent_headers"],
+        json={
+            "item_description": "High performance computing cluster",
+            "category": "compute",
+            "max_budget": "1000.00",
+            "currency": "USD",
+            "requirements": {
+                "max_delivery_days": 5,
+                "min_quality_score": 80,
+                "priority_weights": {
+                    "price_weight": 0.4,
+                    "speed_weight": 0.3,
+                    "quality_weight": 0.2,
+                    "reliability_weight": 0.1,
+                },
+            },
+        },
+    )
+    assert pr_res.status_code == 201, pr_res.text
+    data = pr_res.json()
+
+    assert data["status"] in [PurchaseStatus.AUTHORIZED.value, PurchaseStatus.REQUIRES_APPROVAL.value]
+    purchase_id = data["id"]
+    selected_quote_id = data["selected_quote_id"]
+    assert selected_quote_id is not None
+
+    # Verify recommendation returned by real aeon_ml
+    rec = data["recommendation"]
+    assert rec is not None
+    assert rec["provider_type"] == "module"
+    assert rec["comparison_scores"]["model_version"] == "aeon-ml-hybrid-v1.1.0"
+    assert str(rec["recommended_quote_id"]) == str(selected_quote_id)
+    assert len(rec["reasoning"]) <= 1024
+    assert "composite score" in rec["reasoning"]
+
+    # Verify comparison scores structure
+    scores = rec["comparison_scores"]
+    assert "ranking" in scores
+    assert "best_composite_score" in scores
+    assert str(selected_quote_id) in scores["ranking"]
+    assert scores["ranking"][str(selected_quote_id)]["rank"] == 1
+
+    # Verify payable amount came from DB, not arbitrary model input
+    selected_quote = next(q for q in data["quotes"] if q["id"] == selected_quote_id)
+    assert decimal.Decimal(selected_quote["total_amount"]) > decimal.Decimal("0.00")
+
+    # Verify admin detail endpoint confirms recommendation DB persistence
+    detail_res = await async_client.get(f"/api/v1/purchases/{purchase_id}", headers=ctx["admin_headers"])
+    assert detail_res.status_code == 200
+    detail_rec = detail_res.json()["recommendation"]
+    assert detail_rec["provider_type"] == "module"
+    assert detail_rec["recommended_quote_id"] == rec["recommended_quote_id"]
+    assert detail_rec["reasoning"] == rec["reasoning"]
+
