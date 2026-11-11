@@ -84,15 +84,12 @@ Visit the interactive OpenAPI documentation at `http://localhost:8000/docs`.
 
 ## Running Tests
 
-Run the complete control plane and ML test suites:
+Run the backend and ML test suites:
 ```bash
-# Run all 110 tests
-pytest tests ml-module/tests -v
-
-# Or run backend control plane tests only (80 tests)
+# Run backend control plane tests (80 passed)
 pytest tests -v
 
-# Or run ML module tests only (30 tests)
+# Run ML recommendation module tests (30 passed)
 pytest ml-module/tests -v
 ```
 

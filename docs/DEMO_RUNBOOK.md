@@ -21,9 +21,13 @@ To verify the in-process `aeon_ml` hybrid ranker end-to-end procurement flow:
 pytest tests/integration/test_ml_procurement_flow.py -k "test_real_aeon_ml_module_full_procurement_flow" -v
 ```
 
-To run all 110 automated tests (control plane and ML engine):
+To run the complete automated test suites (110 tests across control plane and ML engine):
 ```bash
-pytest tests ml-module/tests -v
+# Run all backend control plane tests (80 tests)
+pytest tests -v
+
+# Run native ML package unit, invariant, and benchmark tests (30 tests)
+pytest ml-module/tests -v
 ```
 
 ---
