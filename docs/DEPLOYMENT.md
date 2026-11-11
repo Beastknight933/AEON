@@ -57,7 +57,7 @@ AEON includes a validated `render.yaml` infrastructure-as-code specification.
    - **Service Name**: `aeon-backend`
    - **Environment**: `python` (Python 3.12.10)
    - **Plan**: `starter`
-   - **Build Command**: `pip install -r requirements.txt`
+   - **Build Command**: `pip install -r requirements.txt && pip install ./ml-module`
    - **Pre-Deploy Command**: `alembic upgrade head`
    - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
    - **Health Check Path**: `/health`
@@ -79,7 +79,8 @@ Under the **Environment** tab of the `aeon-backend` service, populate the secret
 | `PAYPAL_WEBHOOK_ID` | PayPal Registered Webhook ID | Generated after webhook registration (see Section 4) |
 | `PAYPAL_RETURN_URL` | Frontend buyer approval redirect | `https://aeon-control.vercel.app/payments/success` |
 | `PAYPAL_CANCEL_URL` | Frontend buyer cancellation redirect | `https://aeon-control.vercel.app/payments/cancel` |
-| `ML_PROVIDER_TYPE` | ML Provider selector (`mock` or `module`) | `mock` (or `module` when ML code deployed) |
+| `ML_PROVIDER_TYPE` | ML Provider selector (`mock` or `module`) | `mock` (or `module` to activate the hybrid ML ranker) |
+| `ML_MODULE_PATH` | Import path for ML engine | `aeon_ml` |
 
 ---
 

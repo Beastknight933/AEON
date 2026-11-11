@@ -15,6 +15,8 @@ This report catalogs all security audits, concurrency hazards, architectural edg
 | **Financial** | Critical | Floating-point rounding errors in financial transactions | All amounts defined strictly as `NUMERIC(14, 2)` in database and `decimal.Decimal` in Python/Pydantic | `test_budget_integrity.py` |
 | **Financial** | Critical | Concurrent double-spending race condition | Implemented database row-level locking (`SELECT ... FOR UPDATE`) in `reserve_funds_atomic` | `test_simultaneous_budget_reservations_cannot_overspend` |
 | **Financial** | Critical | Untrusted ML financial amounts | AEON discards model-provided amounts and loads verified quotes from database before policy evaluation | `test_ml_procurement_flow.py` |
+| **Reliability**| High | ML reasoning overflow on PostgreSQL `VARCHAR(1024)` | Truncated reasoning to 1,024 chars in `backend_bridge`, `module_adapter`, and `procurement_service` | `test_backend_bridge_truncates_long_reasoning_to_1024` |
+| **Reliability**| Medium | ML package test namespace collision if using `PYTHONPATH` | Shipped `pyproject.toml` targeting `aeon_ml*` only; package installed via `pip install -e ml-module` | `test_real_aeon_ml_module_full_procurement_flow` |
 | **Financial** | High | Duplicate webhook events causing double-settlement | Unique constraint on `webhook_events.provider_event_id` and idempotent return on replays | `test_e2e_scenario_5_duplicate_webhook_event_idempotency` |
 | **Lifecycle** | High | Stale human approvals executed on modified/expired quotes | Approval verification checks quote expiration, policy version, and purchase state before decision | `test_stale_approval_purchase_state_changed_rejected` |
 | **Lifecycle** | Medium | Conflating payment settlement with physical goods fulfillment | Introduced separate `FulfillmentStatus` (`PENDING`, `IN_TRANSIT`, `DELIVERED`, `CANCELLED`) | `test_reconciliation_authoritative_completed` |
@@ -96,9 +98,14 @@ If a `PAYMENT.CAPTURE.COMPLETED` webhook arrives before the frontend or backend 
 The complete test suite verifies all security, financial, and lifecycle hardening measures:
 
 ```
-============================= 79 passed in 15.57s =============================
-- Unit Tests: 37 passed
-- Integration Tests: 35 passed
-- End-to-End Workflows: 7 passed
+============================ 110 passed in 18.25s ============================
+- Backend Control Plane Tests (tests/): 80 passed
+  • Unit Tests (Security, Models, Policy, Budgets, Identity): 37 passed
+  • Integration Tests (Procurement, Payments, Webhooks, APIs): 36 passed
+  • End-to-End Workflows (All 7 Master Hardening Scenarios): 7 passed
+- ML Module Engine Tests (ml-module/tests/): 30 passed
+  • Ranking, Feature Extraction, Scikit-Learn Model: 8 passed
+  • Bridge Compatibility, 1024-Char Truncation, FastAPI: 6 passed
+  • Safety Invariants, Exception Containment, Benchmarks: 16 passed
 ```
 All tests pass cleanly with zero regressions.

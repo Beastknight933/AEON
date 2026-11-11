@@ -19,59 +19,65 @@ AEON enforces the foundational principle:
 
 ## 2. Configuration & Activation
 
-To activate your ML model in AEON, set the following environment variables in `.env` (or Render / production configuration):
+AEON ships with an in-process machine learning engine located in `ml-module/` (`aeon_ml`), as well as a fallback deterministic heuristic mock provider.
+
+### Local Installation
+Install the ML module package in editable mode:
+```bash
+pip install -e ml-module
+```
+
+### Environment Configuration
+To activate the hybrid ML ranker in AEON, set the following environment variables in `.env` (or Render / production configuration):
 
 ```ini
-# Select the external Python module adapter
+# Select the in-process Python module adapter
 ML_PROVIDER_TYPE=module
 
-# Dotted Python import path to your module
-ML_MODULE_PATH=app.integrations.ml.teammate_model
+# Dotted Python import path to the ML module
+ML_MODULE_PATH=aeon_ml
 
 # Maximum execution time allowed before triggering safe fallback (in seconds)
 ML_TIMEOUT_SECONDS=5.0
 ```
 
-> **Note**: While your model is in development or not configured, AEON uses `ML_PROVIDER_TYPE=mock`, which runs a deterministic multi-criteria scoring heuristic so the rest of the control plane remains 100% testable and operable.
+> **Note**: If `ML_PROVIDER_TYPE=mock`, AEON executes a deterministic multi-criteria scoring heuristic so the control plane remains 100% testable and operable even without ML dependencies installed.
 
 ---
 
-## 3. Function & Module Contract
+## 3. Shipped Model Architecture (`aeon_ml` v1.1.0)
 
-Your module specified by `ML_MODULE_PATH` can be placed anywhere in Python's `sys.path` (e.g. `app/integrations/ml/teammate_model.py` or an installed package).
+The default engine in `ml-module/aeon_ml` implements a **Hybrid Multi-Attribute ML Ranker**:
 
-The module must implement **at least one** of the following conventions:
+1. **Machine Learning Layer (`SklearnPreferenceModel`)**:
+   - A scikit-learn logistic regression preference ranker trained to score supplier quote utility based on normalized feature vectors (price competitiveness, delivery speed, quality score, historical supplier reliability, on-time delivery rate, ESG scores, and warranty terms).
+   - Pre-trained weights stored in `aeon_ml/models/artifacts/preference_model.json`.
+2. **Multi-Attribute Utility Heuristic Layer (`MultiAttributeRanker`)**:
+   - Evaluates procurement constraints (max delivery days, target budget, minimum quality/reliability thresholds) and user-defined priority weights (`price_weight`, `speed_weight`, `quality_weight`, `reliability_weight`).
+   - Applies strict penalties for non-compliant quotes (e.g. delivery date exceedance, quality score below threshold).
+3. **Backend Integration Bridge (`aeon_ml.backend_bridge`)**:
+   - Transparently detects whether `recommend()` is invoked with AEON backend models (`QuoteCandidate`, `RecommendationRequest`) or native ML schemas.
+   - Normalizes data types (Decimals to floats, UUIDs to strings and back).
+   - Formats the response with comprehensive rankings, sub-scores, and best composite score.
+4. **Explainability Engine (`aeon_ml.explainability`)**:
+   - Generates human-readable, auditable narrative justifications explaining why the winning quote was chosen over alternatives, identifying top performance drivers, and detailing trade-offs against the runner-up quote.
+   - **PostgreSQL Safety Truncation**: Automatically limits generated reasoning to at most 1,024 characters to strictly prevent PostgreSQL `VARCHAR(1024)` column overflows on large candidate pools.
 
-### Option A: Module-Level Function (Synchronous or Asynchronous)
+---
+
+## 4. Function & Module Contract
+
+The `aeon_ml` package exports a module-level `recommend` function matching the AEON adapter specification:
 
 ```python
 from app.integrations.ml.schemas import RecommendationRequest, RecommendationResponse
 
-# Either synchronous:
+# Functional contract:
 def recommend(request: RecommendationRequest) -> RecommendationResponse:
     ...
-
-# Or asynchronous:
-async def recommend(request: RecommendationRequest) -> RecommendationResponse:
-    ...
 ```
 
-*(Aliases supported: `predict` or `get_recommendation`)*
-
-### Option B: Class-Based Provider
-
-```python
-from app.integrations.ml.base import RecommendationProvider
-from app.integrations.ml.schemas import RecommendationRequest, RecommendationResponse
-
-class RecommendationProvider:
-    def __init__(self):
-        # Load your weights, artifacts, or pre-trained models here
-        pass
-
-    async def recommend(self, request: RecommendationRequest) -> RecommendationResponse:
-        ...
-```
+Custom or alternate models can be plugged in by changing `ML_MODULE_PATH` to any importable Python module exporting `recommend(request)` or a class named `RecommendationProvider`.
 
 ---
 
@@ -204,9 +210,12 @@ AEON wraps external model execution inside [`ModuleRecommendationAdapter`](file:
 
 ## 7. How to Verify Your Model
 
-Run the AEON ML test suite locally to verify that your model satisfies the contract:
+Run the AEON ML test suites locally to verify that the ML engine and adapter satisfy all safety and functional requirements:
 
 ```bash
-# Run ML integration unit and flow tests
+# Run backend ML integration and end-to-end procurement tests
 pytest tests/unit/test_ml_integration.py tests/integration/test_ml_procurement_flow.py -v
+
+# Run native ML package unit, invariant, and benchmark tests (30 tests)
+pytest ml-module/tests -v
 ```

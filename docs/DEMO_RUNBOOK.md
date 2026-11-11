@@ -16,6 +16,16 @@ pytest tests/e2e/test_master_e2e_workflows.py -v
 
 All 7 core invariants will be verified within ~1.5 seconds.
 
+To verify the in-process `aeon_ml` hybrid ranker end-to-end procurement flow:
+```bash
+pytest tests/integration/test_ml_procurement_flow.py -k "test_real_aeon_ml_module_full_procurement_flow" -v
+```
+
+To run all 110 automated tests (control plane and ML engine):
+```bash
+pytest tests ml-module/tests -v
+```
+
 ---
 
 ## 1. Demo Credentials & Environment

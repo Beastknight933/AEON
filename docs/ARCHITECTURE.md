@@ -32,6 +32,7 @@ flowchart TD
         Proc --> Supp[Supplier Registry & Adapters]
     end
 
+    ML --> AeonML[aeon_ml Hybrid ML Ranker]
     Supp --> MockA[MockCloudStore]
     Supp --> MockB[MockHardwareSupply]
     Payment --> PayPal[PayPal Sandbox Orders v2]
