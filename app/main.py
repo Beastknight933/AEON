@@ -69,7 +69,7 @@ def create_application() -> FastAPI:
     app.include_router(transactions_router, prefix=settings.API_V1_PREFIX)
     app.include_router(audit_router, prefix=settings.API_V1_PREFIX)
 
-    @app.get("/", tags=["Root"])
+    @app.api_route("/", methods=["GET", "HEAD"], tags=["Root"])
     async def root():
         return {
             "message": "AEON Agent Procurement Control Plane API",

@@ -8,8 +8,8 @@ from app.core.config import settings
 router = APIRouter(tags=["Health"])
 
 
-@router.get("/health", status_code=status.HTTP_200_OK)
-@router.get("/live", status_code=status.HTTP_200_OK)
+@router.api_route("/health", methods=["GET", "HEAD"], status_code=status.HTTP_200_OK)
+@router.api_route("/live", methods=["GET", "HEAD"], status_code=status.HTTP_200_OK)
 async def health_check():
     """Liveness probe to verify the application is running."""
     return {
