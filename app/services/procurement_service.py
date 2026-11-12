@@ -110,6 +110,16 @@ class ProcurementService:
         9. Create approval if required.
         10. Authorize when all conditions satisfied.
         """
+        # Security Hardening Boundary Checks (Kill switch, Prompt injection scan)
+        try:
+            from security_hardening.agent_security.kill_switch import agent_kill_switch
+            agent_kill_switch.assert_agent_active(str(agent.id))
+
+            from security_hardening.agent_security.prompt_guard import PromptInjectionGuard
+            PromptInjectionGuard.sanitize_procurement_inputs(req.item_description, req.category, req.requirements)
+        except ImportError:
+            pass
+
         # Step 2: Create Purchase Request
         pr = PurchaseRequest(
             organization_id=organization.id,
@@ -136,6 +146,17 @@ class ProcurementService:
                 metadata_json={"max_budget": str(req.max_budget), "currency": req.currency},
             )
         )
+        try:
+            from security_hardening.audit.tamper_evident import audit_chain
+            audit_chain.append_event(
+                action=AuditAction.PURCHASE_REQUESTED.value,
+                actor_id=str(agent.id),
+                entity_id=str(pr.id),
+                payload={"max_budget": str(req.max_budget), "currency": req.currency},
+                timestamp_iso=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            )
+        except ImportError:
+            pass
 
         # Step 3 & 4: Collect and persist supplier quotes
         transition_purchase_status(pr, PurchaseStatus.QUOTING)

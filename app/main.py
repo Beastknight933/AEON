@@ -55,6 +55,13 @@ def create_application() -> FastAPI:
     # Centralized error handlers
     register_error_handlers(app)
 
+    # Enterprise Security Hardening Middleware (Non-disruptive response headers & API limits)
+    try:
+        from security_hardening.middleware.security_middleware import SecurityHardeningMiddleware
+        app.add_middleware(SecurityHardeningMiddleware)
+    except ImportError:
+        pass
+
     # Mount all v1 routers
     app.include_router(health_router)
     app.include_router(health_router, prefix=settings.API_V1_PREFIX)
@@ -68,6 +75,13 @@ def create_application() -> FastAPI:
     app.include_router(dashboard_router, prefix=settings.API_V1_PREFIX)
     app.include_router(transactions_router, prefix=settings.API_V1_PREFIX)
     app.include_router(audit_router, prefix=settings.API_V1_PREFIX)
+
+    # Mount Enterprise Security Hardening Router
+    try:
+        from security_hardening.integrations.routes import security_router
+        app.include_router(security_router, prefix=settings.API_V1_PREFIX)
+    except ImportError:
+        pass
 
     @app.api_route("/", methods=["GET", "HEAD"], tags=["Root"])
     async def root():

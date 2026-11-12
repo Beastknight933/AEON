@@ -45,12 +45,15 @@ class ApprovalService:
         stmt = stmt.order_by(Approval.created_at.desc())
         approvals = list((await self.session.scalars(stmt)).all())
 
-        # Check and update expired pending approvals
+        # Check and update expired pending approvals and safely release reserved budget
         has_updates = False
         for app in approvals:
             app_expires = ensure_utc(app.expires_at)
             if app.status == ApprovalStatus.PENDING and app_expires and app_expires < now:
                 app.status = ApprovalStatus.EXPIRED
+                res = await self.budget_repo.get_reservation_by_purchase(app.purchase_request_id)
+                if res and res.status == ReservationStatus.ACTIVE:
+                    await self.budget_repo.release_reservation_atomic(res.id)
                 has_updates = True
         if has_updates:
             await self.session.commit()

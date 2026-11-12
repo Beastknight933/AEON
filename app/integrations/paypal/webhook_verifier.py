@@ -25,8 +25,10 @@ class PayPalWebhookVerifier:
         if h.get("x-mock-signature-invalid") == "true":
             raise WebhookVerificationError("PayPal webhook signature verification failed: invalid mock signature")
 
-        # 2. Check for explicit mock pass flag
+        # 2. Check for explicit mock pass flag (strictly forbidden in production mode)
         if h.get("x-mock-webhook") == "true":
+            if settings.APP_ENV == "production":
+                raise WebhookVerificationError("PayPal webhook verification failed: mock bypass is prohibited in production")
             return True
 
         # 3. Extract required PayPal webhook verification headers
