@@ -56,13 +56,12 @@ AEON includes a validated `render.yaml` infrastructure-as-code specification.
 4. Render will parse `render.yaml` and configure:
    - **Service Name**: `aeon-backend`
    - **Environment**: `python` (Python 3.12.10)
-   - **Plan**: `starter`
+   - **Plan**: `free` (or `starter`)
    - **Build Command**: `pip install -r requirements.txt && pip install ./ml-module`
-   - **Pre-Deploy Command**: `alembic upgrade head`
-   - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - **Start Command**: `bash scripts/start.sh`
    - **Health Check Path**: `/health`
 
-> **Zero-Downtime Migration Invariant**: The `preDeployCommand` executes `alembic upgrade head` in an isolated ephemeral build container before new workers receive traffic. If migrations fail, the deployment aborts safely without affecting running instances.
+> **Free Tier Pre-Deployment Execution**: Render's free tier does not support isolated `preDeployCommand` hooks. AEON addresses this via `scripts/start.sh`, which automatically applies all Alembic database migrations (`alembic upgrade head`) before invoking the Uvicorn ASGI server. Optionally, set `AUTO_SEED=true` in Render environment variables on initial deployment to automatically seed the admin user, sample agents, and default policies.
 
 ### Required Environment Variables in Render Dashboard
 Under the **Environment** tab of the `aeon-backend` service, populate the secret keys:

@@ -3,10 +3,9 @@ services:
     name: aeon-backend
     env: python
     region: oregon
-    plan: starter
+    plan: free
     buildCommand: "pip install -r requirements.txt && pip install ./ml-module"
-    preDeployCommand: "alembic upgrade head"
-    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    startCommand: "bash scripts/start.sh"
     healthCheckPath: /health
     autoDeploy: true
     envVars:

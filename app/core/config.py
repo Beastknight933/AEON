@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     AGENT_KEY_PREFIX: str = "aeon_live_"
 
     # CORS
-    CORS_ORIGINS: List[str] = [
+    CORS_ORIGINS: Union[str, List[str]] = [
         "http://localhost:3000",
         "http://localhost:5173",
         "https://aeon-control.vercel.app",
