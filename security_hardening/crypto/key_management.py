@@ -5,7 +5,7 @@ from __future__ import annotations
 import abc
 import datetime
 import secrets
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from security_hardening.core.constants import KeyPurpose
 
 
