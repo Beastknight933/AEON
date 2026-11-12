@@ -370,10 +370,10 @@ class PaymentService:
 
         resource = event_body.get("resource", {})
 
-        # Record audit event for webhook receipt
+        # Record audit event for webhook receipt (organization_id=None respects PostgreSQL nullable FK)
         self.session.add(
             AuditEvent(
-                organization_id=uuid.UUID("00000000-0000-0000-0000-000000000000"),
+                organization_id=None,
                 actor_type="WEBHOOK",
                 actor_id="paypal",
                 action=AuditAction.WEBHOOK_RECEIVED.value,

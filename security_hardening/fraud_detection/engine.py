@@ -1,8 +1,10 @@
 """Heuristic Fraud Scoring and Risk Assessment Engine."""
 
+from __future__ import annotations
+
 import decimal
 import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from security_hardening.core.constants import SecuritySeverity
 
 

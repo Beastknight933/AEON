@@ -1,9 +1,11 @@
 """Key Management, Versioning, and KMS/HSM Integration Interface."""
 
+from __future__ import annotations
+
 import abc
 import datetime
 import secrets
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from security_hardening.core.constants import KeyPurpose
 
 

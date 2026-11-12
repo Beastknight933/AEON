@@ -1,5 +1,7 @@
 """Structured Security Event Logger and Non-Blocking Event Bus."""
 
+from __future__ import annotations
+
 import datetime
 from collections import deque
 from typing import Any, Dict, List, Optional

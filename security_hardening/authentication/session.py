@@ -1,5 +1,7 @@
 """Administrator session monitoring, fingerprinting, and revocation registry."""
 
+from __future__ import annotations
+
 import datetime
 import uuid
 from typing import Dict, List, Optional

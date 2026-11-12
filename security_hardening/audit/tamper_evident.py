@@ -1,5 +1,7 @@
 """Tamper-Evident Audit Verification and Cryptographic Hash-Chaining."""
 
+from __future__ import annotations
+
 import hashlib
 import json
 from typing import Any, Dict, List, Optional, Tuple

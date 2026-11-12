@@ -1,8 +1,10 @@
 """Emergency Agent Kill-Switch and Global Purchasing Freeze."""
 
+from __future__ import annotations
+
 import datetime
 import threading
-from typing import Dict, Optional, Set
+from typing import Any, Dict, Optional, Set, Tuple
 from security_hardening.core.errors import AgentKillSwitchError
 
 
