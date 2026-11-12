@@ -33,12 +33,20 @@ This guide provides end-to-end instructions for deploying the AEON Agent Procure
 
 ### Connection String Strategy
 Supabase offers two connection endpoints:
-1. **Direct Connection (Recommended for asyncpg row-level locks)**:
-   - Port: `5432`
-   - URI format: `postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres`
-   - AEON utilizes row-level locking (`SELECT ... FOR UPDATE`) for atomic budget integrity. Direct connections or Supabase **Session Pooler** fully support standard transaction isolation and row-level locks.
+1. **Connection Pooler / Session Mode (Port 5432 - REQUIRED FOR RENDER)**:
+   - Render does not support outbound IPv6 traffic. Because direct Supabase hosts (`db.[REF].supabase.co`) resolve exclusively to IPv6 addresses, connecting directly from Render results in `OSError: [Errno 101] Network is unreachable`.
+   - **Render must use the Supabase Connection Pooler IPv4 hostname** in Session mode (port `5432`):
+     ```
+     postgresql+asyncpg://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:5432/postgres
+     ```
+   - Session mode pooler fully supports row-level locking (`SELECT ... FOR UPDATE`), transaction isolation, and Alembic migrations.
+
 2. **Transaction Pooler (Port 6543)**:
-   - If utilizing PgBouncer in transaction mode, ensure asyncpg disables prepared statement caching by setting `?prepared_statement_cache_size=0`.
+   - Port `6543` can also be used; AEON automatically sets `statement_cache_size = 0` when connecting to `pooler.supabase.com` to prevent prepared statement collisions.
+
+3. **Direct Connection (Port 5432 - IPv6 only)**:
+   - URI format: `postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres`
+   - Only works on hosts with native IPv6 egress or with Supabase's paid IPv4 add-on. Do not use on Render.
 
 ### Database Preparation
 No manual SQL script execution is required. Database schema creation is fully automated via Alembic migrations.

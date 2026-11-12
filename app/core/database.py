@@ -22,6 +22,9 @@ db_url = get_normalized_database_url(settings.DATABASE_URL)
 connect_args = {}
 if "sqlite" in db_url:
     connect_args["check_same_thread"] = False
+elif "pooler.supabase.com" in db_url or "6543" in db_url:
+    # Disable statement caching for Supabase connection pooler (Supavisor/PgBouncer)
+    connect_args["statement_cache_size"] = 0
 
 engine_kwargs = {
     "echo": settings.DEBUG,
@@ -30,6 +33,8 @@ engine_kwargs = {
 if "sqlite" not in db_url:
     engine_kwargs["pool_size"] = settings.DATABASE_POOL_SIZE
     engine_kwargs["max_overflow"] = settings.DATABASE_MAX_OVERFLOW
+    if connect_args:
+        engine_kwargs["connect_args"] = connect_args
 else:
     engine_kwargs["connect_args"] = connect_args
 

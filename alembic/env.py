@@ -61,10 +61,16 @@ async def run_async_migrations() -> None:
     configuration = config.get_section(config.config_ini_section, {})
     configuration["sqlalchemy.url"] = db_url
 
+    engine_kwargs = {
+        "prefix": "sqlalchemy.",
+        "poolclass": pool.NullPool,
+    }
+    if "pooler.supabase.com" in db_url or "6543" in db_url:
+        engine_kwargs["connect_args"] = {"statement_cache_size": 0}
+
     connectable = async_engine_from_config(
         configuration,
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
+        **engine_kwargs,
     )
 
     async with connectable.connect() as connection:
